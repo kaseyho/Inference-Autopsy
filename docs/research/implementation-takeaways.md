@@ -326,3 +326,80 @@ What to avoid:
 - Do not position the project as a replacement for OpenAI Evals or Anthropic
   eval workflows.
 
+## Takeaway: Trace the full AI system workflow
+
+Sources:
+
+- Project scope upgrade
+- Workflow tracing concepts
+- Retrieval and prompt assembly tradeoff design
+
+Project decision:
+
+Inference Autopsy should trace retrieval latency, prompt assembly latency, LLM
+latency, tool latency, and end-to-end latency instead of only model latency.
+
+Implementation impact:
+
+- The trace model needs stage boundaries.
+- Reports need a workflow view in addition to model latency views.
+- The benchmark runner must preserve context for retrieval and tool stages.
+- The project can explain where time was spent across the full system.
+
+What to avoid:
+
+- Do not collapse all stages into one total latency number.
+- Do not treat LLM latency as the whole system.
+- Do not make the workflow trace depend on backend internals.
+
+## Takeaway: Pair latency with evaluation outcomes
+
+Sources:
+
+- Evaluation outcome concepts
+- Production tradeoff design
+- Escaped-regression requirement
+
+Project decision:
+
+Inference Autopsy should record question, retrieved docs, answer, expected
+answer, retrieval recall, answer correctness, and latency together when the
+workflow uses retrieval or evaluation.
+
+Implementation impact:
+
+- The trace or evaluation record must hold quality and latency side by side.
+- The report should show latency/quality tradeoffs.
+- Regression detection should catch cases where latency is stable but quality
+  degrades.
+
+What to avoid:
+
+- Do not build a latency-only benchmark and call it complete.
+- Do not separate quality evaluation from trace evidence.
+- Do not miss regressions where model latency stays flat but retrieval quality
+  falls.
+
+## Takeaway: Benchmark agent and tool workflows explicitly
+
+Sources:
+
+- Agent/tool benchmark concepts
+- AI engineering internship relevance
+
+Project decision:
+
+Inference Autopsy should support agentic tasks with tool-call counts, tool
+latency, success, cost, and end-to-end latency.
+
+Implementation impact:
+
+- The schema needs tool-related fields.
+- The report needs cost and success visibility.
+- Benchmarking should expose whether more tool calls made the agent worse.
+
+What to avoid:
+
+- Do not measure only model time for an agent run.
+- Do not ignore cost.
+- Do not assume fewer tool calls automatically mean a better result.

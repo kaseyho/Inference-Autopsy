@@ -37,11 +37,12 @@ regression tester for OpenAI-compatible LLM inference endpoints.
 The deeper thesis is:
 
 ```txt
-LLM inference latency is not one number. A request can be slow because of
-first-token delay, slow decode, queueing, stream stalls, cache-sensitive
-behavior, rate limits, output bloat, or tail-latency amplification. Inference
-Autopsy records enough evidence to separate those symptoms, explain them, and
-prevent regressions from silently shipping.
+AI system latency is not one number. A request can be slow because of retrieval
+delay, prompt assembly delay, first-token delay, slow decode, queueing, stream
+stalls, cache-sensitive behavior, rate limits, tool latency, output bloat, or
+tail-latency amplification. Inference Autopsy records enough evidence to
+separate those symptoms, explain them, and prevent regressions from silently
+shipping.
 ```
 
 ## Why This Project Is Strong for AI Engineering Internships
@@ -63,6 +64,9 @@ It lets you talk about:
 - TTFT, TTFB, ITL, throughput, and tail latency.
 - Percentiles and regression thresholds.
 - Queueing symptoms under load.
+- Retrieval latency, prompt assembly latency, tool latency, and end-to-end
+  latency.
+- Retrieval recall and answer correctness as first-class tradeoffs.
 - Cache-sensitive prompt behavior.
 - Reproducibility through JSONL traces.
 - Static report generation.
@@ -114,6 +118,18 @@ It should measure:
 - Error rate.
 - Timeout rate.
 
+### 1b. How fast is the whole AI system?
+
+It should also measure:
+
+- Retrieval latency.
+- Prompt assembly latency.
+- Tool latency.
+- End-to-end latency.
+- Retrieval recall.
+- Answer correctness.
+- Cost per successful task.
+
 ### 2. Why is it slow?
 
 It should distinguish between externally visible symptoms:
@@ -127,6 +143,9 @@ It should distinguish between externally visible symptoms:
 - Output bloat.
 - Cache-sensitive latency.
 - Warmup penalties.
+- Retrieval failures.
+- Prompt assembly overhead.
+- Tool bottlenecks.
 
 ### 3. Does it collapse under load?
 
@@ -162,6 +181,13 @@ It should save enough trace data to support:
 - CI artifacts.
 - Later report generation from saved traces.
 
+It should also preserve enough context to reproduce:
+
+- Retrieved documents.
+- Prompt assembly inputs.
+- Tool-call sequences.
+- Expected answers or evaluation keys.
+
 ### 6. Did my deployment regress?
 
 It should compare runs and fail gates such as:
@@ -173,6 +199,13 @@ error_rate > 1%
 tail_amplification_ratio > 2.5x
 cache_benefit_ratio < -30%
 ```
+
+It should also detect cases where:
+
+- model latency stayed flat
+- retrieval recall fell
+- answer correctness fell
+- end-to-end quality regressed
 
 ### 7. Can I explain the failure clearly?
 
@@ -290,6 +323,15 @@ autopsy replay runs/baseline.jsonl \
 Replay is one of the strongest product features because it turns traces into
 portable workload artifacts.
 
+For AI system workflows, `bench` should also be able to represent stages such
+as:
+
+```txt
+retrieval -> prompt assembly -> tool use -> LLM generation -> final answer
+```
+
+That is what makes this project stand out above a plain LLM latency profiler.
+
 ## Optional Wrapper Commands
 
 After the core pipeline is stable, convenience commands can be added.
@@ -311,6 +353,17 @@ OpenTelemetry-shaped spans.
 The important rule is that wrapper commands must not create separate metric or
 trace logic. They should reuse the same pipeline.
 
+### Higher-Level Modes
+
+The project should eventually support benchmark modes for:
+
+```txt
+workflow tracing
+retrieval benchmarking
+agent/tool benchmarking
+evaluation outcome analysis
+```
+
 ## Required CLI Options
 
 The benchmark command should eventually support:
@@ -331,6 +384,19 @@ The benchmark command should eventually support:
 --cache-mode
 --prompt-recording-mode
 --output
+```
+
+For higher-level workflow and eval runs, the project should also be able to
+express:
+
+```txt
+--retrieval-mode
+--docs-source
+--answer-key
+--judge-mode
+--tool-mock
+--tool-schema
+--trace-stage-boundaries
 ```
 
 The options are not just interface details. Each one ties to a measurable part
@@ -878,6 +944,21 @@ prefix_reuse_benefit_ratio
 warmup_penalty_ratio
 ```
 
+Required workflow metrics:
+
+```txt
+retrieval_latency_ms
+prompt_assembly_latency_ms
+tool_latency_ms
+end_to_end_latency_ms
+retrieval_recall
+answer_correctness
+latency_quality_tradeoff
+tool_call_count
+cost_usd
+cost_latency_tradeoff
+```
+
 Useful grouping dimensions:
 
 ```txt
@@ -1049,6 +1130,16 @@ Rate Limit Police
 Output Hydra
 ```
 
+### Future Workflow Labels
+
+```txt
+Retrieval Drift
+Prompt Assembly Bottleneck
+Tool Cascade
+Answer Drift
+Quality Regressor
+```
+
 Each diagnosis should include:
 
 ```txt
@@ -1207,6 +1298,17 @@ Baseline comparison
 Recommendations
 Benchmark methodology
 Raw trace metadata
+```
+
+Workflow reports should also include:
+
+```txt
+retrieval latency
+prompt assembly latency
+tool latency
+retrieval recall
+answer correctness
+quality/latency tradeoff
 ```
 
 The report should answer:
@@ -1679,6 +1781,21 @@ Show:
 - Cold/warm TTFT difference.
 - Cache-sensitive behavior.
 
+### Act 4b: Retrieval Regression
+
+Run:
+
+```bash
+autopsy bench --profile rag-qa --max-requests 40
+```
+
+Show:
+
+- Model TTFT and ITL stay roughly flat.
+- Retrieval recall drops.
+- Answer correctness drops.
+- The end-to-end workflow regresses even though the LLM stage looks stable.
+
 ### Act 5: Report
 
 Generate:
@@ -1886,6 +2003,10 @@ Be ready to explain:
 - Why JSONL is a good trace format.
 - Why replay requires prompt storage or regeneration.
 - Why metrics should be computed from saved traces.
+- How retrieval quality can regress while model latency stays constant.
+- How workflow tracing exposes prompt assembly and tool bottlenecks.
+- Why answer correctness and retrieval recall should be measured together with
+  latency.
 - Why CI gates fail closed.
 - What black-box profiling cannot prove.
 
@@ -1945,11 +2066,10 @@ The project is resume-ready only when:
 The entire project can be compressed into one sentence:
 
 ```txt
-Inference Autopsy turns messy LLM streaming behavior into reproducible traces,
+Inference Autopsy turns messy AI system behavior into reproducible traces,
 turns traces into trustworthy metrics, turns metrics into evidence-backed
 diagnoses, and turns diagnoses into reports and CI gates.
 ```
 
 If you can build that and explain every part, you will have a strong AI
 engineering internship project.
-

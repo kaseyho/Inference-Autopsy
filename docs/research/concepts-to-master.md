@@ -432,3 +432,101 @@ What I do not need for V1:
 - Safety eval suites.
 - Replacing OpenAI Evals or Anthropic eval workflows.
 
+## Workflow Tracing and AI System Profiling
+
+What I need to know:
+
+- An AI system is bigger than the LLM call.
+- Common stages include retrieval, prompt assembly, tool use, model
+  generation, and final response assembly.
+- Each stage can have its own latency profile and failure mode.
+- A system can get worse even if model latency stays constant.
+- Tracing stage boundaries makes it possible to see where time was spent.
+- Workflow traces should preserve enough structure to compare latency and
+  quality together.
+
+Why it matters for this project:
+
+- This is the step that makes the project stand out more than a plain LLM
+  benchmark.
+- It turns the tool into an AI system profiler instead of a model-only profiler.
+- It lets me explain why a production assistant regressed even if the model
+  stage looked fine.
+
+How I would explain it in a conversation:
+
+- "The model call is only one stage. A production AI system also spends time on
+  retrieval, prompt assembly, tool use, and final answer composition. I want
+  Inference Autopsy to trace those boundaries so I can see whether the system
+  got slower because retrieval drifted, prompt assembly got heavier, a tool
+  started taking longer, or the model itself regressed."
+
+What I do not need for V1:
+
+- Full distributed tracing across every microservice.
+- Every possible workflow stage type.
+- Deep backend instrumentation of all retrieval systems.
+- A complete agent orchestration platform.
+
+## Evaluation Outcomes and Tradeoffs
+
+What I need to know:
+
+- Good AI systems are not just fast; they are correct enough and useful enough.
+- Evaluation outcomes can include question, retrieved docs, answer, expected
+  answer, retrieval recall, answer correctness, and latency.
+- A system can improve latency while hurting answer quality.
+- A system can improve answer quality while hurting latency.
+- Tradeoffs should be measured together, not separately.
+
+Why it matters for this project:
+
+- This is how the project becomes a production tradeoff tool.
+- It lets me say whether an optimization made the system better or merely
+  faster.
+- It directly supports the escaped-regression question.
+
+How I would explain it in a conversation:
+
+- "I do not want a benchmark that only says the model got faster. I want to
+  know whether the retrieval stage got worse, whether the answer correctness
+  declined, and whether the end-to-end user outcome changed. That is the kind of
+  tradeoff real production teams care about."
+
+What I do not need for V1:
+
+- A full eval platform.
+- Human preference labeling infrastructure.
+- LLM-judge sophistication.
+- Dataset curation tooling.
+
+## Agent and Tool Benchmarks
+
+What I need to know:
+
+- Agentic systems do work by calling tools.
+- Tool calls have their own latency, count, cost, and failure behavior.
+- A fast agent that makes many unnecessary tool calls may still be bad.
+- Benchmarking agents requires recording task success and cost alongside
+  latency.
+- Tool latency should be separate from model latency.
+
+Why it matters for this project:
+
+- This is the next level up from pure chat benchmarking.
+- It makes the project much more relevant to real AI engineering roles.
+- It helps me discuss tradeoffs like cost, latency, and task success together.
+
+How I would explain it in a conversation:
+
+- "For agent benchmarks, I want to know whether the task succeeded, how many
+  tool calls it used, what those tool calls cost, and how long the whole flow
+  took. That lets me see whether a supposedly faster agent was actually worse
+  because it made more tool calls or failed the task."
+
+What I do not need for V1:
+
+- A general agent orchestration framework.
+- A marketplace of tools.
+- Full tool-call semantic parsing for every provider.
+- Production billing integration.

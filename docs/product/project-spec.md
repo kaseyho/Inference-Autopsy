@@ -3,7 +3,7 @@
 ## Purpose
 
 Define the non-ambiguous project contract for Inference Autopsy as a
-resume-grade AI engineering internship project.
+AI engineering internship project.
 
 ## Reference When
 
@@ -15,9 +15,9 @@ diagnosis engine, report generator, replay workflow, diff gates, or demo.
 This file is the hard product contract. If implementation ideas conflict with
 this spec, this spec wins unless the maintainer explicitly updates it.
 
-## Resume Target
+## Target
 
-Inference Autopsy must credibly support this resume framing:
+Inference Autopsy must credibly support this framing:
 
 ```txt
 Inference Autopsy - LLM Inference Profiler & Regression Tester
@@ -49,7 +49,7 @@ easy to discuss in depth.
 
 ## Core Thesis
 
-LLM inference latency is not one number.
+AI system latency is not one number.
 
 Inference Autopsy is an open-source black-box profiler, workload replayer, and
 regression tester for OpenAI-compatible LLM inference endpoints. It records
@@ -69,6 +69,128 @@ external symptoms from black-box measurements and uses careful language:
 - Say "likely driver", "symptom", or "consistent with".
 - Do not say "definitive root cause" unless backend telemetry proves it.
 
+## Workflow Tracing
+
+The project must profile the full AI system pipeline, not only the LLM call.
+
+Required workflow stages:
+
+```txt
+retrieval_latency
+prompt_assembly_latency
+llm_latency
+tool_latency
+end_to_end_latency
+```
+
+Required workflow metrics:
+
+```txt
+retrieval_latency_ms
+prompt_assembly_latency_ms
+llm_latency_ms
+tool_latency_ms
+end_to_end_latency_ms
+```
+
+Hard rules:
+
+- Stage boundaries must be preserved in the trace.
+- The report must show where time was spent across the pipeline.
+- LLM latency is one stage, not the whole system.
+- A project that only measures model latency is not yet the intended project.
+
+## Evaluation Outcomes
+
+The project must connect latency with answer quality and retrieval quality.
+
+Required evaluation fields:
+
+```txt
+question
+retrieved_docs
+answer
+expected_answer
+retrieval_recall
+answer_correctness
+latency
+```
+
+Required evaluation metrics:
+
+```txt
+retrieval_recall
+answer_correctness
+latency
+latency_quality_tradeoff
+```
+
+Hard rules:
+
+- The tool must be able to say when latency improved but answer quality fell.
+- The tool must be able to say when retrieval quality degraded while model
+  latency stayed constant.
+- Evaluation outcomes are part of the core trace story, not a side feature.
+
+## Agent and Tool Benchmarks
+
+The project must support agentic workflows, not just single-turn chat.
+
+Required agent/tool fields:
+
+```txt
+task
+tool_calls
+tool_latency_ms
+tool_call_count
+success
+cost_usd
+end_to_end_latency_ms
+```
+
+Required agent/tool metrics:
+
+```txt
+tool_call_count
+tool_latency_ms
+end_to_end_latency_ms
+success_rate
+cost_usd
+cost_latency_tradeoff
+```
+
+Hard rules:
+
+- The tool must record how many tool calls were required.
+- The tool must record success and cost, not only latency.
+- A faster agent run is not automatically a better run.
+
+## Escaped Regression
+
+The project must be able to answer this question:
+
+```txt
+What regression escaped your tool because model latency stayed constant but
+retrieval quality degraded?
+```
+
+Required answer shape:
+
+- Model latency stayed roughly flat.
+- Retrieval recall dropped.
+- Answer correctness dropped.
+- The end-to-end workflow regressed despite stable model timing.
+
+Example escaped regression:
+
+```txt
+The first version missed a retrieval regression because it only measured model
+latency. TTFT and ITL stayed flat, but retrieval recall dropped from 0.91 to
+0.67, answer correctness fell, and the final answer quality degraded. The fix
+is to trace retrieval latency, prompt assembly latency, retrieval recall, and
+answer correctness alongside model latency.
+```
+
 ## Product Boundaries
 
 ### Must Be
@@ -80,6 +202,8 @@ external symptoms from black-box measurements and uses careful language:
 - Capable of streaming and non-streaming measurement.
 - Capable of producing static HTML reports.
 - Capable of CI regression gating.
+- Capable of tracing retrieval, prompt assembly, tool use, answer quality, and
+  end-to-end tradeoffs for AI system workflows.
 
 ### Must Not Become
 
@@ -95,7 +219,9 @@ external symptoms from black-box measurements and uses careful language:
 
 If a feature does not improve trace quality, metric quality, diagnosis quality,
  replayability, report clarity, or CI regression detection, it is out of scope
-for V1.
+for V1. For higher-level AI system workflows, the feature must also improve
+visibility into retrieval, prompt assembly, tool use, answer quality, or
+end-to-end tradeoffs.
 
 ## V1 Success Criteria
 
@@ -110,6 +236,8 @@ V1 is successful when a user can:
 7. Compare baseline and candidate traces.
 8. Fail CI on a latency or reliability regression.
 9. Explain what happened using evidence from the trace.
+10. Explain whether a regression came from retrieval quality, prompt assembly,
+    tool latency, model latency, or end-to-end behavior.
 
 ## Commands
 
@@ -147,6 +275,21 @@ autopsy summarize
 --output
 ```
 
+### Required Workflow/Eval Inputs
+
+The project must also be able to express these concepts in workflow or eval
+runs:
+
+```txt
+--retrieval-mode
+--docs-source
+--answer-key
+--judge-mode
+--tool-mock
+--tool-schema
+--trace-stage-boundaries
+```
+
 ### Wrapper Commands Are Optional
 
 These commands may be added after the core pipeline is stable:
@@ -161,6 +304,17 @@ autopsy diagnose
 Hard rule: wrapper commands must delegate to the same trace, metrics, and
 diagnosis pipeline as `bench`, `summarize`, `report`, and `diff`. They must not
 create parallel logic.
+
+### Higher-Level Modes
+
+The project must eventually support benchmark modes for:
+
+```txt
+workflow tracing
+retrieval benchmarking
+agent/tool benchmarking
+evaluation outcome analysis
+```
 
 ## Load Testing Semantics
 
@@ -195,7 +349,7 @@ without labeling them.
 
 ## Cache-Aware Benchmarking
 
-Cache-aware benchmarking is required for the resume target, but the tool must be
+Cache-aware benchmarking is required for the target, but the tool must be
 honest about what it can infer.
 
 ### Required Cache Modes
@@ -237,6 +391,21 @@ warm_ttft_p95_ms
 cache_benefit_ratio
 prefix_reuse_benefit_ratio
 warmup_penalty_ratio
+```
+
+### Required Workflow Metrics
+
+```txt
+retrieval_latency_ms
+prompt_assembly_latency_ms
+tool_latency_ms
+end_to_end_latency_ms
+retrieval_recall
+answer_correctness
+latency_quality_tradeoff
+tool_call_count
+cost_usd
+cost_latency_tradeoff
 ```
 
 ## Prompt Recording and Replay
@@ -334,6 +503,44 @@ retryable
 occurred_after_first_byte
 occurred_after_first_token
 ```
+
+## Workflow Trace Shape
+
+For AI system workflows, the trace must be able to represent stage boundaries
+and stage outcomes, not just model call timing.
+
+### Required Workflow Fields
+
+```txt
+retrieval_latency_ms
+prompt_assembly_latency_ms
+llm_latency_ms
+tool_latency_ms
+end_to_end_latency_ms
+retrieved_docs
+question
+answer
+expected_answer
+retrieval_recall
+answer_correctness
+```
+
+### Required Agent/Tool Fields
+
+```txt
+task
+tool_calls
+tool_call_count
+success
+cost_usd
+```
+
+### Hard Rules
+
+- Retrieval, prompt assembly, tool use, LLM generation, and end-to-end timing
+  must be separable.
+- Evaluation outcomes must be traceable to the same run as latency metrics.
+- A workflow trace without stage boundaries is incomplete.
 
 ## Run Metadata
 
@@ -492,6 +699,16 @@ JSON Skeleton
 Retry Zombie
 ```
 
+### Future Workflow Labels
+
+```txt
+Retrieval Drift
+Prompt Assembly Bottleneck
+Tool Cascade
+Answer Drift
+Quality Regressor
+```
+
 ### Required Diagnosis Fields
 
 Every diagnosis must include:
@@ -534,6 +751,17 @@ Baseline comparison
 Recommendations
 Benchmark methodology
 Raw trace metadata
+```
+
+Workflow reports should also include:
+
+```txt
+retrieval latency
+prompt assembly latency
+tool latency
+retrieval recall
+answer correctness
+quality/latency tradeoff
 ```
 
 ### Required Charts
@@ -810,8 +1038,8 @@ Deliver:
 Success criteria:
 
 - End-to-end demo works from trace to report to diff.
-- Resume bullets are true.
-- Interview explanation is evidence-backed.
+- Bullets are true.
+- Explanation is evidence-backed.
 
 ## Demo Contract
 
@@ -825,7 +1053,7 @@ The demo must show:
 6. A replay against a second endpoint or model.
 7. A diff that fails a CI-style gate.
 
-## Interview Talking Points
+## Talking Points
 
 The project must prepare the builder to discuss:
 
@@ -872,5 +1100,6 @@ Do not cut:
 - No hosted dashboard in V1.
 - No distributed workers in V1.
 - No untested gate parser.
-- No resume claim that the repo cannot demonstrate.
-
+- No claims that the repo cannot demonstrate.
+- No AI-system regression blind spot where retrieval quality or tool behavior
+  degrades while model latency looks stable.
