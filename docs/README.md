@@ -94,6 +94,7 @@ docs/
     known-issues.md
     technical-debt.md
   workflow/
+    phase-1-build-guide.md
     development-lifecycle.md
     branching-strategy.md
     release-process.md
@@ -148,6 +149,7 @@ docs/
 | `product/owner-project-guide.md` | Human-facing complete project guide | Learning, planning, demos, and interview prep | Understand the project end to end |
 | `product/*.md` | Product decision system | Planning features | Protect the local CLI and report-first product shape |
 | `context/*.md` | Project memory | Onboarding and task start | Avoid re-learning known constraints |
+| `workflow/phase-1-build-guide.md` | Step-by-step Phase 1 implementation guide | Building the first CLI/schema/JSONL/summary milestone | Keep Phase 1 focused and testable |
 | `workflow/*.md` | Development and release process | Daily execution | Keep changes reviewable and releasable |
 | `governance/*.md` | Decision authority | Tradeoffs and policy | Escalate architectural changes explicitly |
 | `templates/*.md` | Reusable execution templates | Starting task types | Fill risk, tests, rollback, and docs sections |
