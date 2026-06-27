@@ -936,7 +936,7 @@ Deliver:
 Working command:
 
 ```bash
-autopsy single --base-url http://localhost:11434/v1 --model qwen3:8b --prompt "Write a haiku about GPUs."
+autopsy single --base-url http://localhost:11434/v1 --model <model-id-from-/v1/models> --prompt "Write a haiku about GPUs."
 ```
 
 ### Week 3: Workload Runner
@@ -953,7 +953,7 @@ Deliver:
 Working command:
 
 ```bash
-autopsy bench --base-url http://localhost:11434/v1 --model qwen3:8b --profile short-chat --concurrency 1,4 --max-requests 40 --output runs/short_chat.jsonl
+autopsy bench --base-url http://localhost:11434/v1 --model <model-id-from-/v1/models> --profile short-chat --concurrency 1,4 --max-requests 40 --output runs/short_chat.jsonl
 ```
 
 ### Week 4: Metrics and Saturation

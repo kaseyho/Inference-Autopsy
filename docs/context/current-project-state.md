@@ -15,14 +15,18 @@ changes.
 
 ## Snapshot
 
-As of 2026-05-30, the repository contains:
+As of 2026-06-27, the repository contains:
 
 - `README.md` with product vision, target CLI, metrics, trace format, report
   sections, planned stack, and development commands.
 - `LICENSE`.
 - This `docs/` operating system.
-
-No Python package skeleton has been created yet.
+- A Python package skeleton under `autopsy/`.
+- Phase 1 trace schema, JSONL helpers, fake trace generation, and summary
+  metrics.
+- Phase 2 single-request path for OpenAI-compatible chat completions:
+  HTTPX async transport, tolerant SSE parsing, trace mapping, and `autopsy
+  single`.
 
 ## Product Scope
 
@@ -45,4 +49,3 @@ Inference Autopsy targets:
 - Tests: pytest.
 - Formatting and linting: ruff.
 - Type checking: mypy.
-

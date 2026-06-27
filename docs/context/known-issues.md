@@ -14,9 +14,11 @@ Update this file when a meaningful issue is found or resolved.
 
 ## Current Known Issues
 
-- No implementation exists yet beyond README and docs.
 - Token counting may be approximate when providers do not return usage metadata.
 - OpenAI-compatible streaming responses vary across servers.
+- Local Ollama examples must use a model ID actually returned by `/v1/models`;
+  otherwise `/v1/chat/completions` can return HTTP 404 with a provider
+  `model not found` error.
 - Hosted measurements include network and provider variance.
 - Replay cannot guarantee deterministic model outputs.
 
@@ -38,4 +40,3 @@ Notes:
 Resolution:
 <filled when resolved>
 ```
-

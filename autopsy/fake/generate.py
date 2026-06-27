@@ -2,6 +2,7 @@ import random
 from pathlib import Path
 
 from autopsy.traces.jsonl import write_jsonl
+from autopsy.traces.derive import derive_request_metrics
 from autopsy.traces.schema import (
     CacheMode,
     ErrorInfo,
@@ -194,33 +195,11 @@ def _make_metrics(
     token_times: list[float],
     output_tokens: int,
 ) -> RequestMetrics:
-    itls = [
-        token_times[index] - token_times[index - 1]
-        for index in range(1, len(token_times))
-    ]
-    request_latency = timings.request_end
-    output_tps = None
-    if output_tokens and timings.first_token is not None and timings.request_end is not None:
-        generation_seconds = max((timings.request_end - timings.first_token) / 1000, 0.001)
-        output_tps = output_tokens / generation_seconds
-
-    return RequestMetrics(
-        ttfb_ms=timings.first_byte,
-        ttft_ms=timings.first_token,
-        request_latency_ms=request_latency,
-        itl_mean_ms=(sum(itls) / len(itls)) if itls else None,
-        itl_p95_ms=_percentile(itls, 0.95),
-        output_tps=output_tps,
-        stall_count=sum(1 for gap in itls if gap >= 500),
+    return derive_request_metrics(
+        timings=timings,
+        token_times=token_times,
+        output_tokens=output_tokens,
     )
-
-
-def _percentile(values: list[float], percentile: float) -> float | None:
-    if not values:
-        return None
-    ordered = sorted(values)
-    index = round((len(ordered) - 1) * percentile)
-    return ordered[index]
 
 
 def _profile_for_scenario(scenario: str) -> str:

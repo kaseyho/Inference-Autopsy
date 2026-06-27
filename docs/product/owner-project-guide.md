@@ -316,7 +316,7 @@ Example:
 ```bash
 autopsy replay runs/baseline.jsonl \
   --base-url http://localhost:11434/v1 \
-  --model qwen3:8b \
+  --model <model-id-from-/v1/models> \
   --output runs/replay_ollama.jsonl
 ```
 
@@ -1816,7 +1816,7 @@ Show:
 Run:
 
 ```bash
-autopsy replay runs/baseline.jsonl --base-url http://localhost:11434/v1 --model qwen3:8b --output runs/replay.jsonl
+autopsy replay runs/baseline.jsonl --base-url http://localhost:11434/v1 --model <model-id-from-/v1/models> --output runs/replay.jsonl
 autopsy diff runs/baseline.jsonl runs/replay.jsonl --fail-if "ttft_p95 > +20%"
 ```
 
