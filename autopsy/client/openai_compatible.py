@@ -30,21 +30,44 @@ class SingleRequestConfig:
     timeout_seconds: float = 30.0
     stream: bool = True
 
+@dataclass(frozen=True)
+class RequestTraceContext:
+    run_id: str
+    request_id: str
+    request_sequence_index: int
+    profile: str
+    load_mode: LoadMode = LoadMode.CLOSED_LOOP
+    concurrency: int | None = 1
+    cache_mode: CacheMode = CacheMode.NONE
+    prompt_family: str = "single"
+    template_id: str | None = None
+    template_seed: int | None = None
+    shape: dict[str, int | float | str] | None = None
 
 async def run_single_request(
     config: SingleRequestConfig,
+    trace_context: RequestTraceContext | None = None,
+    client: httpx.AsyncClient | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> TraceRecord:
-    timeout = httpx.Timeout(config.timeout_seconds)
-    async with httpx.AsyncClient(timeout=timeout, transport=transport) as client:
+    context = trace_context or single_request_trace_context()
+
+    if client is not None:
         if config.stream:
-            return await _run_streaming_request(config=config, client=client)
-        return await _run_non_streaming_request(config=config, client=client)
+            return await _run_streaming_request(config=config, client=client, trace_context=context)
+        return await _run_non_streaming_request(config=config, client=client, trace_context=context)
+
+    timeout = httpx.Timeout(config.timeout_seconds)
+    async with httpx.AsyncClient(timeout=timeout, transport=transport) as owned_client:
+        if config.stream:
+            return await _run_streaming_request(config=config, client=owned_client, trace_context=context)
+        return await _run_non_streaming_request(config=config, client=owned_client, trace_context=context)
 
 
 async def _run_streaming_request(
     config: SingleRequestConfig,
     client: httpx.AsyncClient,
+    trace_context: RequestTraceContext,
 ) -> TraceRecord:
     start = time.perf_counter()
     first_byte: float | None = None
@@ -72,6 +95,7 @@ async def _run_streaming_request(
                 error = _http_status_error(exc, first_byte, first_token)
                 return _trace_record(
                     config=config,
+                    trace_context=trace_context,
                     status=status,
                     timings=Timings(
                         first_byte=first_byte,
@@ -145,6 +169,7 @@ async def _run_streaming_request(
     )
     return _trace_record(
         config=config,
+        trace_context=trace_context,
         status=status,
         timings=timings,
         token_times=token_times,
@@ -157,6 +182,7 @@ async def _run_streaming_request(
 async def _run_non_streaming_request(
     config: SingleRequestConfig,
     client: httpx.AsyncClient,
+    trace_context: RequestTraceContext,
 ) -> TraceRecord:
     start = time.perf_counter()
     first_byte: float | None = None
@@ -202,6 +228,7 @@ async def _run_non_streaming_request(
     timings = Timings(first_byte=first_byte, first_token=None, request_end=request_end)
     return _trace_record(
         config=config,
+        trace_context=trace_context,
         status=status,
         timings=timings,
         token_times=[],
@@ -213,6 +240,7 @@ async def _run_non_streaming_request(
 
 def _trace_record(
     config: SingleRequestConfig,
+    trace_context: RequestTraceContext,
     status: RequestStatus,
     timings: Timings,
     token_times: list[float],
@@ -225,16 +253,21 @@ def _trace_record(
         token_times=token_times,
         output_tokens=output_tokens,
     )
+    replay_shape = dict(trace_context.shape or {})
+    replay_shape.setdefault("temperature", config.temperature)
+    replay_shape.setdefault("max_tokens", config.max_tokens)
+    replay_shape.setdefault("stream", str(config.stream))
+
     return TraceRecord(
-        run_id=f"run_single_{uuid4().hex[:12]}",
-        request_id="req_00000",
-        request_sequence_index=0,
-        profile="single",
+        run_id=trace_context.run_id,
+        request_id=trace_context.request_id,
+        request_sequence_index=trace_context.request_sequence_index,
+        profile=trace_context.profile,
         model=config.model,
         base_url_hash=_hash_base_url(config.base_url),
-        load_mode=LoadMode.CLOSED_LOOP,
-        concurrency=1,
-        cache_mode=CacheMode.NONE,
+        load_mode=trace_context.load_mode,
+        concurrency=trace_context.concurrency,
+        cache_mode=trace_context.cache_mode,
         prompt_recording_mode=PromptRecordingMode.HASH_ONLY,
         input_tokens_estimated=_estimate_tokens(config.prompt),
         output_tokens=output_tokens,
@@ -246,12 +279,10 @@ def _trace_record(
         metrics=metrics,
         replay=ReplayInfo(
             messages_hash=_hash_text(config.prompt),
-            prompt_family="single",
-            shape={
-                "temperature": config.temperature,
-                "max_tokens": config.max_tokens,
-                "stream": str(config.stream),
-            },
+            prompt_family=trace_context.prompt_family,
+            template_id=trace_context.template_id,
+            template_seed=trace_context.template_seed,
+            shape=replay_shape,
         ),
         error=error,
     )
@@ -324,4 +355,21 @@ def _timeout_error(
         retryable=True,
         occurred_after_first_byte=first_byte is not None,
         occurred_after_first_token=first_token is not None,
+    )
+
+def single_request_trace_context() -> RequestTraceContext:
+
+    '''
+    The benchmark runner will pass its own context. This helper keeps the
+    single-request command simple without letting benchmark identity live in
+    the HTTP layer.
+    '''
+
+    return RequestTraceContext(
+        run_id=f"run_single_{uuid4().hex[:12]}",
+        request_id="req_00000",
+        request_sequence_index=0,
+        profile="single",
+        concurrency=1,
+        prompt_family="single",
     )

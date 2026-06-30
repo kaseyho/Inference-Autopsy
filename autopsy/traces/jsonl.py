@@ -12,6 +12,18 @@ def write_jsonl(path: Path, records: Iterable[TraceRecord]) -> None:
             file.write(line)
             file.write("\n")
     
+def append_jsonl_record(path: Path, record: TraceRecord) -> None:
+    """Append one completed request trace.
+
+    Benchmarks should write evidence as each request finishes. If the run is
+    interrupted halfway through, the trace file still contains every request
+    that completed before the interruption.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as file:
+        file.write(record.model_dump_json())
+        file.write("\n")
+
 def read_jsonl(path: Path) -> list[TraceRecord]:
     records: list[TraceRecord] = []
     with path.open("r", encoding="utf-8") as file:

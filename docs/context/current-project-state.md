@@ -21,12 +21,16 @@ As of 2026-06-27, the repository contains:
   sections, planned stack, and development commands.
 - `LICENSE`.
 - This `docs/` operating system.
+- `docs/writeups/` with project progress write-ups.
 - A Python package skeleton under `autopsy/`.
 - Phase 1 trace schema, JSONL helpers, fake trace generation, and summary
   metrics.
 - Phase 2 single-request path for OpenAI-compatible chat completions:
   HTTPX async transport, tolerant SSE parsing, trace mapping, and `autopsy
   single`.
+- Phase 3 workload runner: built-in profiles, deterministic prompt generation,
+  closed-loop concurrency sweeps, append-friendly JSONL output, simple progress
+  counts, and `autopsy bench`.
 
 ## Product Scope
 

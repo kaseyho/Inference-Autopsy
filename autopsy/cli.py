@@ -4,11 +4,23 @@ from pathlib import Path
 from autopsy.client.openai_compatible import SingleRequestConfig, run_single_request
 from autopsy.fake.generate import generate_fake_trace_file
 from autopsy.metrics.summary import summarize_trace_file
+from autopsy.runner.workload_runner import BenchRunConfig, run_benchmark
 from autopsy.traces.jsonl import write_jsonl
 
 import typer
 
 app = typer.Typer(help="Inference Autopsy CLI.")
+
+
+def _parse_concurrency(value: str) -> list[int]:
+    """Parse a closed-loop concurrency sweep like '1,4,8'."""
+    try:
+        levels = [int(part.strip()) for part in value.split(",") if part.strip()]
+    except ValueError as exc:
+        raise typer.BadParameter("Concurrency must be comma-separated integers.") from exc
+    if not levels or any(level < 1 for level in levels):
+        raise typer.BadParameter("Concurrency must include positive integers.")
+    return levels
 
 @app.command("generate-fake")
 def generate_fake(
@@ -74,3 +86,41 @@ def single(
         typer.echo(f"Error: {record.error.error_type}: {record.error.message}")
     if output is not None:
         typer.echo(f"Wrote trace to {output}")
+
+
+@app.command("bench")
+def bench(
+    base_url: str = typer.Option(..., "--base-url", help="OpenAI-compatible base URL."),
+    model: str = typer.Option(..., "--model", help="Model name to request."),
+    profile: str = typer.Option("short-chat", "--profile", help="Built-in workload profile."),
+    concurrency: str = typer.Option("1", "--concurrency", help="Closed-loop concurrency levels, e.g. 1,4,8."),
+    max_requests: int = typer.Option(10, "--max-requests", help="Requests per concurrency level."),
+    output: Path = typer.Option(..., "--output", help="Path to write JSONL traces."),
+    api_key: str | None = typer.Option(None, "--api-key", help="Optional bearer API key."),
+    timeout_seconds: float = typer.Option(30.0, "--timeout", help="Request timeout in seconds."),
+    stream: bool = typer.Option(True, "--stream/--no-stream", help="Use streaming response mode."),
+) -> None:
+    """Run a closed-loop benchmark and write request-level JSONL traces."""
+    config = BenchRunConfig(
+        base_url=base_url,
+        model=model,
+        profile=profile,
+        concurrency_values=_parse_concurrency(concurrency),
+        max_requests=max_requests,
+        output=output,
+        api_key=api_key,
+        timeout_seconds=timeout_seconds,
+        stream=stream,
+    )
+    result = asyncio.run(run_benchmark(config))
+    progress = result.progress
+
+    typer.echo("Benchmark complete.")
+    typer.echo(f"Run ID: {result.run_id}")
+    typer.echo(f"Elapsed: {result.elapsed_seconds:.2f}s")
+    typer.echo(f"Requests written: {progress.completed}")
+    typer.echo(f"Success: {progress.success}")
+    typer.echo(f"Errors: {progress.error}")
+    typer.echo(f"Timeouts: {progress.timeout}")
+    typer.echo(f"Partials: {progress.partial}")
+    typer.echo(f"Trace file: {result.output}")
